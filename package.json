@@ -1,0 +1,25 @@
+{
+  "name": "ddns_ionos",
+  "version": "1.0.0",
+  "description": "Dynamic DNS resolver for Ionos",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/888iee/ddns_ionos.git"
+  },
+  "keywords": [
+    "ddns",
+    "ionos",
+    "node",
+    "docker"
+  ],
+  "author": "devDat",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/888iee/ddns_ionos/issues"
+  },
+  "homepage": "https://github.com/888iee/ddns_ionos#readme"
+}
