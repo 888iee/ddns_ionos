@@ -21,5 +21,8 @@
   "bugs": {
     "url": "https://github.com/888iee/ddns_ionos/issues"
   },
-  "homepage": "https://github.com/888iee/ddns_ionos#readme"
+  "homepage": "https://github.com/888iee/ddns_ionos#readme",
+  "dependencies": {
+    "dotenv": "^16.0.3"
+  }
 }
