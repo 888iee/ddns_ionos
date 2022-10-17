@@ -1,5 +1,6 @@
 const https = require('node:https')
 const axios = require('axios');
+const cron  = require('node-cron');
 require('dotenv').config();
 
 const zoneUrl = "https://api.hosting.ionos.com/dns/v1/zones/"
@@ -69,9 +70,9 @@ async function SetNewIp() {
 		"ttl": args.ttl,
 		"prio": 0
 	}
-	const { data, status } = await axios.put( url, d, options)
+	const { status } = await axios.put( url, d, options)
 	
-	if ( status === 200 ) console.log( status + '\n' + { ...data } )
+	if ( status === 200 ) console.log( status )
 }
 
 async function CreateDnsRecord() {
@@ -101,6 +102,8 @@ async function CheckIp() {
 	await retrieveIp()
 	if ( args.retrievedIp !== args.ip )	{
 		await SetNewIp()
+	} else {
+		console.log( "Ip is still the same" )
 	}
 }
 
@@ -112,4 +115,7 @@ async function main() {
 	else await CheckIp()
 }
 
-main()
+cron.schedule( '*/2 * * * *', () => {
+	console.log( 'running ddns service' )
+	main()
+})
