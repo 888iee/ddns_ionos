@@ -118,4 +118,7 @@ async function main() {
 cron.schedule( '*/2 * * * *', () => {
 	console.log( 'running ddns service' )
 	main()
+	args.ip = ""
+	NO_RECORD_FOUND = false
+	args.retrievedIp = ""
 })
