@@ -9,21 +9,34 @@
 Since I selfhost stuff and my ISP changes my ipv4 regularly I need to update my DNS Records to point to my services. This node app checks every 2 minutes if your ip has changed and updates the dns record accordingly. So to say your own Dynamic DNS service.
 
 ## How to run
-Clone this repo and cd into it.
+
+1. Clone this repo and cd into it.
 ```bash
-	git clone git@github.com:888iee/ddns_ionos.git
-	cd ./ddns_ionos
+git clone git@github.com:888iee/ddns_ionos.git
+cd ./ddns_ionos
 ```
 
+2. Create a .env file
+```bash
+nano .env
+```
+```ini
+api_key="prefix.encryptionkey"
+domain="my.domain.com"
+dns_type="A"
+ttl="3600"
+```
+
+3. Run with docker or directly with nodejs
 ### Docker
 ```bash
-	docker build . -t ddns_ionos
-	docker run -d ddns_ionos
+docker build . -t ddns_ionos
+docker run -d ddns_ionos
 ```
 
 ### Bare metal Node.js
 ```bash
-	node ./app.js
+node ./app.js
 ```
 
 ## Disclaimer
