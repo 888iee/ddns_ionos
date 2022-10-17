@@ -72,7 +72,7 @@ async function SetNewIp() {
 	}
 	const { status } = await axios.put( url, d, options)
 	
-	if ( status === 200 ) console.log( status )
+	onsole.log( status )
 }
 
 async function CreateDnsRecord() {
@@ -90,8 +90,8 @@ async function CreateDnsRecord() {
 		}
 	]
 	try {
-		const response = await axios.post( url, d, options )
-		console.log( response )
+		const { status } = await axios.post( url, d, options )
+		console.log( status )
 		
 	} catch (error) {
 		console.log(error.response)
@@ -101,6 +101,7 @@ async function CreateDnsRecord() {
 async function CheckIp() {
 	await retrieveIp()
 	if ( args.retrievedIp !== args.ip )	{
+		console.log( `retrieved: ${args.retrievedIp}\ncurrent: ${args.ip}`)
 		await SetNewIp()
 	} else {
 		console.log( "Ip is still the same" )
@@ -118,7 +119,7 @@ async function main() {
 cron.schedule( '*/2 * * * *', () => {
 	console.log( 'running ddns service' )
 	main()
-	args.ip = ""
+	args.ip = undefined
 	NO_RECORD_FOUND = false
 	args.retrievedIp = ""
 })
