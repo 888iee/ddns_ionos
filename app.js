@@ -1,42 +1,115 @@
 const https = require('node:https')
+const axios = require('axios');
 require('dotenv').config();
 
-let RetrievedIp = 0;
-
-function retrieveIp() {
-	https.get('https://1.1.1.1/cdn-cgi/trace', res => {
-
-		res.setEncoding('utf-8').on( 'data', d =>  {
-			let array = d.match(/[^\r\n]+/g)
-			RetrievedIp = array[2].split("=")[1]
-		})
-
-	})
-}
-
-function getCustomerZone() {
-	// let zoneUrl = "api.hosting.ionos.com"
-	let zoneUrl = "https://api.hosting.ionos.com/dns/v1/zones/"
-	let options = {
-		host: 'api.hosting.ionos.com/',
-		// port: 443,
-		path: '/dns/v1/zones',
-		method: 'GET',
-		// headers: {
-		// 	accept: 'application/json',
-		// 	'X-API-Key': process.env.api_key
-		// }
-
+const zoneUrl = "https://api.hosting.ionos.com/dns/v1/zones/"
+let recordsUrl = "https://api.hosting.ionos.com/dns/v1/zones/{zoneId}/records/"
+const options = {
+	headers: {
+		accept: 'application/json',
+		'X-API-Key': process.env.api_key,
+		'Content-Type': 'application/json'
 	}
-	https.get( options, (res) => {
-		console.log(res.statusCode)
-		res.setEncoding('utf-8').on( 'data', d => console.log(d))
-		res.on('error', function (err) {
-			console.log('error: ' + err.message);
-		});
-		
-		// res.end();
-	})
+}
+const args = {
+	domain: process.env.domain,
+	dns_type: process.env.dns_type,
+	zoneId: process.env.zoneId,
+	recordId: process.env.recordId,
+	ttl: process.env.ttl,
+	retrievedIp: 0
+}
+let NO_RECORD_FOUND = false
+
+async function retrieveIp() {
+	const { data } = await axios.get( "https://1.1.1.1/cdn-cgi/trace" )
+	
+	let array = data.match(/[^\r\n]+/g)
+	args.retrievedIp = array[2].split("=")[1]
 }
 
-getCustomerZone()
+async function getCustomerZoneId() {
+
+	const { data } = await axios.get(zoneUrl, options)
+	const { id } = data[0]
+
+	args.zoneId = id
+	
+	if ( args.recordId === undefined ) await getCZ()
+}
+
+async function getCZ() {
+	const { data } = await axios.get( zoneUrl + args.zoneId, options)
+	
+	const [ dnsRecord ] = data.records.filter( x => x.name === args.domain && x.type === args.dns_type )
+	
+	if ( dnsRecord == undefined || dnsRecord.length === 0 ) NO_RECORD_FOUND = true
+	else args.recordId = dnsRecord.id
+	// args.ip = dnsRecord.content
+}
+
+async function getIpFromDnsRecord() {
+	let url = recordsUrl.replace( '{zoneId}', args.zoneId )
+	if ( url.indexOf( args.recordId ) == -1 ) url = url + args.recordId
+	
+	const { data } = await axios.get( url , options )
+	
+	
+	if ( data == undefined || data.length === 0 ) NO_RECORD_FOUND = true
+	else args.ip = data.content
+}
+
+async function SetNewIp() {
+	let url = recordsUrl.replace( '{zoneId}', args.zoneId )
+	if ( url.indexOf( args.recordId ) == -1 ) url = url + args.recordId
+	
+	let d = {
+		"disabled": false,
+		"content": args.retrievedIp,
+		"ttl": args.ttl,
+		"prio": 0
+	}
+	const { data, status } = await axios.put( url, d, options)
+	
+	if ( status === 200 ) console.log( status + '\n' + { ...data } )
+}
+
+async function CreateDnsRecord() {
+	let url = recordsUrl.replace( '{zoneId}', args.zoneId )
+	
+	await retrieveIp()
+	let d = [
+		{
+		  "name": args.domain,
+		  "type": args.dns_type,
+		  "content": args.retrievedIp,
+		  "ttl": args.ttl,
+		  "prio": 0,
+		  "disabled": false
+		}
+	]
+	try {
+		const response = await axios.post( url, d, options )
+		console.log( response )
+		
+	} catch (error) {
+		console.log(error.response)
+	}
+}
+
+async function CheckIp() {
+	await retrieveIp()
+	if ( args.retrievedIp !== args.ip )	{
+		await SetNewIp()
+	}
+}
+
+async function main() {
+	if ( args.zoneId === undefined ) await getCustomerZoneId()
+	if ( args.ip === undefined && !NO_RECORD_FOUND ) await getIpFromDnsRecord()
+
+	if ( NO_RECORD_FOUND ) await CreateDnsRecord()
+	else await CheckIp()
+}
+
+main()
