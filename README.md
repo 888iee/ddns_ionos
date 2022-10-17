@@ -36,6 +36,7 @@ docker run -d ddns_ionos
 
 ### Bare metal Node.js
 ```bash
+npm install
 node ./app.js
 ```
 
