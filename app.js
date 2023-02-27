@@ -17,7 +17,7 @@ const args = {
 	domain2: 		process.env.domain,
 	dns_type: 		process.env.dns_type,
 	zoneId: 		process.env.zoneId,
-	recordIds:		[],
+	recordIds:		["", ""],
 	ttl: 			process.env.ttl,
 	retrievedIp: 	0
 }
@@ -128,10 +128,10 @@ async function main() {
 }
 
 getAltDomain()
-cron.schedule( '*/2 * * * *', () => {
+// cron.schedule( '*/2 * * * *', () => {
 	console.log( 'running ddns service' )
 	main()
 	args.ip = undefined
 	NO_RECORD_FOUND = false
 	args.retrievedIp = ""
-})
+// })
