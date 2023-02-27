@@ -13,14 +13,19 @@ const options = {
 	}
 }
 const args = {
-	domain: process.env.domain,
-	dns_type: process.env.dns_type,
-	zoneId: process.env.zoneId,
-	recordId: process.env.recordId,
-	ttl: process.env.ttl,
-	retrievedIp: 0
+	domain: 		process.env.domain,
+	domain2: 		process.env.domain,
+	dns_type: 		process.env.dns_type,
+	zoneId: 		process.env.zoneId,
+	recordIds:		[],
+	ttl: 			process.env.ttl,
+	retrievedIp: 	0
 }
 let NO_RECORD_FOUND = false
+
+function getAltDomain() {
+	args.domain.startsWith( "www." ) ? args.domain2 = args.domain2.replace( "www." ) : args.domain2 = `www.${args.domain}`
+}
 
 async function retrieveIp() {
 	const { data } = await axios.get( "https://1.1.1.1/cdn-cgi/trace" )
@@ -42,16 +47,17 @@ async function getCustomerZoneId() {
 async function getCZ() {
 	const { data } = await axios.get( zoneUrl + args.zoneId, options)
 	
-	const [ dnsRecord ] = data.records.filter( x => x.name === args.domain && x.type === args.dns_type )
+	const dnsRecord = data.records.filter( x => ( x.name === args.domain || x.name === args.domain2 ) && x.type === args.dns_type )
 	
 	if ( dnsRecord == undefined || dnsRecord.length === 0 ) NO_RECORD_FOUND = true
-	else args.recordId = dnsRecord.id
+	else dnsRecord.map( record => args.recordIds.push( record.id ))
+	// args.recordId = dnsRecord.id
 	// args.ip = dnsRecord.content
 }
 
 async function getIpFromDnsRecord() {
 	let url = recordsUrl.replace( '{zoneId}', args.zoneId )
-	if ( url.indexOf( args.recordId ) == -1 ) url = url + args.recordId
+	if ( url.indexOf( args.recordIds[0] ) == -1 ) url = url + args.recordIds[0]
 	
 	const { data } = await axios.get( url , options )
 	
@@ -61,41 +67,46 @@ async function getIpFromDnsRecord() {
 }
 
 async function SetNewIp() {
-	let url = recordsUrl.replace( '{zoneId}', args.zoneId )
-	if ( url.indexOf( args.recordId ) == -1 ) url = url + args.recordId
-	
-	let d = {
-		"disabled": false,
-		"content": args.retrievedIp,
-		"ttl": args.ttl,
-		"prio": 0
-	}
-	const { status } = await axios.put( url, d, options)
-	
-	onsole.log( status )
+	args.recordIds.forEach( async record => {
+		let url = recordsUrl.replace( '{zoneId}', args.zoneId )
+
+		if ( url.indexOf( record ) == -1 ) url = url + record
+		
+		let d = {
+			"disabled": false,
+			"content": args.retrievedIp,
+			"ttl": args.ttl,
+			"prio": 0
+		}
+		const { status } = await axios.put( url, d, options)
+		
+		console.log( status )
+	})
 }
 
 async function CreateDnsRecord() {
 	let url = recordsUrl.replace( '{zoneId}', args.zoneId )
 	
 	await retrieveIp()
-	let d = [
-		{
-		  "name": args.domain,
-		  "type": args.dns_type,
-		  "content": args.retrievedIp,
-		  "ttl": args.ttl,
-		  "prio": 0,
-		  "disabled": false
+	args.recordIds.forEach( async (record, idx, ar) => {
+		let d = [
+			{
+			"name": idx === 0 ? args.domain : args.domain2,
+			"type": args.dns_type,
+			"content": args.retrievedIp,
+			"ttl": args.ttl,
+			"prio": 0,
+			"disabled": false
+			}
+		]
+		try {
+			const { status } = await axios.post( url, d, options )
+			console.log( status )
+			
+		} catch (error) {
+			console.log(error.response)
 		}
-	]
-	try {
-		const { status } = await axios.post( url, d, options )
-		console.log( status )
-		
-	} catch (error) {
-		console.log(error.response)
-	}
+	})
 }
 
 async function CheckIp() {
@@ -116,10 +127,11 @@ async function main() {
 	else await CheckIp()
 }
 
-cron.schedule( '*/2 * * * *', () => {
+getAltDomain()
+// cron.schedule( '*/2 * * * *', () => {
 	console.log( 'running ddns service' )
 	main()
 	args.ip = undefined
 	NO_RECORD_FOUND = false
 	args.retrievedIp = ""
-})
+// })
